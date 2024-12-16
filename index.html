@@ -1,40 +1,103 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <link rel="stylesheet" href='style.css' />
-  <script src="src/index.js"></script>
-  <title>KidsMDb</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test SubmitData Function</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mocha/10.1.0/mocha.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chai/4.3.6/chai.min.js"></script>
+    <style>
+        #mocha {
+            font-family: Arial, sans-serif;
+        }
+    </style>
 </head>
 <body>
-  <h2>Movies Database</h2>
-  
-  <ul>
-    <li>
-      <h3>The Brave Little Toaster</h3>
-      <div>ID: 1</div>
-    </li>
-    <li>
-      <h3>The Princess Bride</h3>
-      <div>ID: 2</div>
-    </li>
-    <li>
-      <h3>Spirited Away</h3>
-      <div>ID: 3</div>
-    </li>
-  </ul>
+    <div id="mocha"></div>
 
-  <section>
-    <form>
-      <label for="searchByID">Search By ID</label>
-      <input id="searchByID" type="text" placeholder="Enter ID here"/>
-      <input type="submit" />
-    </form>
-  </section>
-  <section id="movieDetails">
-    <h4>Title</h4>
-    <p>Summary</p>
-  </section>
+    <script>
+        // Define the submitData function
+        function submitData(name, email) {
+            return fetch('/users', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name, email }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                const newId = data.id;
+                const div = document.createElement('div');
+                div.textContent = `User ID: ${newId}`;
+                document.body.appendChild(div);
+                return newId;
+            })
+            .catch(error => {
+                const div = document.createElement('div');
+                div.textContent = `Error: ${error.message}`;
+                document.body.appendChild(div);
+                throw error;  // rethrow the error for the test
+            });
+        }
+
+        // Mocha test setup
+        mocha.setup('bdd');
+        const expect = chai.expect;
+
+        describe('submitData()', function() {
+            it('makes a POST request to /users with name and email', function(done) {
+                const name = "John Doe";
+                const email = "john@example.com";
+
+                // Simulate a successful fetch response
+                global.fetch = function() {
+                    return Promise.resolve({
+                        json: () => Promise.resolve({ id: 123 }),
+                    });
+                };
+
+                submitData(name, email).then((id) => {
+                    expect(id).to.equal(123);
+                    done();
+                }).catch(done);
+            });
+
+            it('handles the POST request response and appends the new id to the DOM', function(done) {
+                const name = "Jane Doe";
+                const email = "jane@example.com";
+
+                global.fetch = function() {
+                    return Promise.resolve({
+                        json: () => Promise.resolve({ id: 456 }),
+                    });
+                };
+
+                submitData(name, email).then(() => {
+                    const div = document.body.querySelector('div');
+                    expect(div.textContent).to.include('User ID: 456');
+                    done();
+                }).catch(done);
+            });
+
+            it('handles a failed POST request using catch and appends the error message to the DOM', function(done) {
+                const name = "Error User";
+                const email = "error@example.com";
+
+                global.fetch = function() {
+                    return Promise.reject(new Error("Network Error"));
+                };
+
+                submitData(name, email).catch(() => {
+                    const div = document.body.querySelector('div');
+                    expect(div.textContent).to.include('Error: Network Error');
+                    done();
+                });
+            });
+        });
+
+        // Run the tests
+        mocha.run();
+    </script>
 </body>
 </html>
